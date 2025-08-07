@@ -1,5 +1,5 @@
 {
-  "name": "my-react-app",
+  "name": "trending-repos",
   "version": "1.0.0",
   "description": "A simple React application",
   "main": "src/index.js",
