@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import { API_CONFIG } from '../config/api.config';
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { API_CONFIG } from "../config/config";
 
 const StarredRepos = () => {
   const [repositories, setRepositories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
 
   const fetchRepos = async (pageNumber) => {
     try {
@@ -14,36 +14,136 @@ const StarredRepos = () => {
         `${API_CONFIG.BASE_URL}?q=created:>${API_CONFIG.REFERENCE_DATE}&sort=stars&order=desc&page=${pageNumber}&per_page=${API_CONFIG.PER_PAGE}`
       );
 
-      if (pageNumber === 1) {
-        setRepositories(response.data.items);
-      } else {
-        setRepositories((prev) => [...prev, ...response.data.items]);
-      }
-
-      setHasMore(response.data.items.length === API_CONFIG.PER_PAGE);
+      setRepositories(response.data.items);
+      setTotalPages(Math.ceil(response.data.total_count / API_CONFIG.PER_PAGE));
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching repositories:', error);
+      console.error("Error fetching repositories:", error);
       setLoading(false);
     }
   };
-
-  const handleScroll = useCallback(() => {
-    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 5 && !loading && hasMore) {
-      setPage((prevPage) => prevPage + 1);
-    }
-  }, [loading, hasMore]);
-
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
 
   useEffect(() => {
     fetchRepos(page);
   }, [page]);
 
-  if (loading && page === 1) {
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    window.scrollTo(0, 0);
+  };
+
+  const handlePrevPage = () => {
+    if (page > 1) {
+      handlePageChange(page - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (page < totalPages) {
+      handlePageChange(page + 1);
+    }
+  };
+
+  const renderPageButtons = () => {
+    const pageButtons = [];
+    const maxPageButtons = 5;
+
+    if (totalPages <= maxPageButtons) {
+      for (let i = 1; i <= totalPages; i++) {
+        pageButtons.push(
+          <button
+            key={i}
+            className={`page-button ${i === page ? "active" : ""}`}
+            onClick={() => handlePageChange(i)}
+          >
+            {i}
+          </button>
+        );
+      }
+    } else {
+      if (page <= 3) {
+        for (let i = 1; i <= 3; i++) {
+          pageButtons.push(
+            <button
+              key={i}
+              className={`page-button ${i === page ? "active" : ""}`}
+              onClick={() => handlePageChange(i)}
+            >
+              {i}
+            </button>
+          );
+        }
+        pageButtons.push(<span key="page">...</span>);
+        pageButtons.push(
+          <button
+            key={totalPages}
+            className={`page-button ${totalPages === page ? "active" : ""}`}
+            onClick={() => handlePageChange(totalPages)}
+          >
+            {totalPages}
+          </button>
+        );
+      } else if (page > totalPages - 3) {
+        pageButtons.push(
+          <button
+            key={1}
+            className={`page-button ${1 === page ? "active" : ""}`}
+            onClick={() => handlePageChange(1)}
+          >
+            1
+          </button>
+        );
+        pageButtons.push(<span key="page">...</span>);
+        for (let i = totalPages - 2; i <= totalPages; i++) {
+          pageButtons.push(
+            <button
+              key={i}
+              className={`page-button ${i === page ? "active" : ""}`}
+              onClick={() => handlePageChange(i)}
+            >
+              {i}
+            </button>
+          );
+        }
+      } else {
+        pageButtons.push(
+          <button
+            key={1}
+            className={`page-button ${1 === page ? "active" : ""}`}
+            onClick={() => handlePageChange(1)}
+          >
+            1
+          </button>
+        );
+        pageButtons.push(<span key="page-start">...</span>);
+        for (let i = page - 1; i <= page + 1; i++) {
+          pageButtons.push(
+            <button
+              key={i}
+              className={`page-button ${i === page ? "active" : ""}`}
+              onClick={() => handlePageChange(i)}
+            >
+              {i}
+            </button>
+          );
+        }
+        pageButtons.push(<span key="page-end">...</span>);
+        pageButtons.push(
+          <button
+            key={totalPages}
+            className={`page-button ${totalPages === page ? "active" : ""}`}
+            onClick={() => handlePageChange(totalPages)}
+          >
+            {totalPages}
+          </button>
+        );
+      }
+    }
+
+    return pageButtons;
+  };
+
+  if (loading) {
     return <div className="loading">Loading...</div>;
   }
 
@@ -54,7 +154,7 @@ const StarredRepos = () => {
           <h1 className="header-title">Trending Repos</h1>
         </div>
       </header>
-      
+
       <div className="repos-container">
         <div className="repos-list">
           {repositories.map((repo) => (
@@ -72,17 +172,35 @@ const StarredRepos = () => {
                   </div>
                 </div>
                 <p className="description">
-                  {repo.description || 'No description available'}
+                  {repo.description || "No description available"}
                 </p>
                 <div className="repo-stats">
-                  <span className="stars">⭐ {repo.stargazers_count.toLocaleString()}</span>
+                  <span className="stars">
+                    ⭐ {repo.stargazers_count.toLocaleString()}
+                  </span>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {loading && <div className="loading">Loading...</div>}
+        <div className="pagination">
+          <button
+            className="page-button prev-button"
+            onClick={handlePrevPage}
+            disabled={page === 1}
+          >
+            Prev
+          </button>
+          {renderPageButtons()}
+          <button
+            className="page-button next-button"
+            onClick={handleNextPage}
+            disabled={page === totalPages}
+          >
+            Next
+          </button>
+        </div>
 
         <div className="footer-tabs">
           <a href="#trending" className="tab active">

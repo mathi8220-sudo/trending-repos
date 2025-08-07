@@ -1,4 +1,3 @@
-import React from 'react';
 import StarredRepos from './components/StarredRepos';
 import './components/StarredRepos.css';
 
